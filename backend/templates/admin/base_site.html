@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&family=Red+Hat+Text:wght@400;500&family=Red+Hat+Mono&display=swap" rel="stylesheet">
+<style>
+  :root, html[data-theme="light"] {
+    --primary: #151515; --secondary: #292929; --accent: #ee0000;
+    --primary-fg: #fff; --header-color: #c7c7c7; --header-branding-color: #fff;
+    --header-bg: #151515; --header-link-color: #fff;
+    --breadcrumbs-bg: #292929; --breadcrumbs-link-fg: #fff; --breadcrumbs-fg: #c7c7c7;
+    --link-fg: #0066cc; --link-hover-color: #004d99; --link-selected-fg: #004d99;
+    --button-bg: #ee0000; --button-hover-bg: #be0000;
+    --default-button-bg: #ee0000; --default-button-hover-bg: #be0000;
+    --object-tools-bg: #151515; --object-tools-hover-bg: #ee0000;
+    --selected-row: #fce3e3; --font-family-primary: "Red Hat Text", system-ui, sans-serif;
+    --font-family-monospace: "Red Hat Mono", monospace;
+  }
+  #header { border-bottom: 3px solid #ee0000; }
+  #site-name, h1, h2, .module caption, .module h2 { font-family: "Red Hat Display", sans-serif; }
+  .module h2, .module caption { background: #151515; }
+  .button, input[type=submit] { border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">
+  <span style="color:#ee0000">■</span> {{ site_header|default:_('Django administration') }}
+</a></div>
+{% endblock %}
+
+{% block nav-global %}<a href="/" style="color:#c7c7c7;margin-left:1rem">← Back to the lab</a>{% endblock %}

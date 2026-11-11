@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ── Smart City Access Lab ───────────────────────────────────
+!frontend/src/lib/
+node_modules/
+frontend/dist/
+backend/data/
+backend/keys/
+backend/logs/
+backend/staticfiles/
+docker/.env

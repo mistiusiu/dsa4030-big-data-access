@@ -1,0 +1,105 @@
+# ═══════════════════════════════════════════════════════════
+#  Mji Mpya — Smart City Big Data Access Lab
+#
+#  Lab UI             →  http://localhost:8080
+#  Super-admin (Django)→ http://localhost:8080/admin/
+#  Backend (direct)   →  http://localhost:8000/api/health/
+#
+#  Usage
+#  ───────
+#  cp docker/.env.example docker/.env      # optional: change secrets
+#  docker compose -f docker/docker-compose.yml up --build -d
+#  docker compose -f docker/docker-compose.yml down        # keep data
+#  docker compose -f docker/docker-compose.yml down -v     # wipe lake, keys, DB
+# ═══════════════════════════════════════════════════════════
+
+name: smartcity-access-lab
+
+x-backend-env: &backend-env
+  TZ: Africa/Nairobi
+  DEBUG: ${DEBUG:-false}
+  SECRET_KEY: ${SECRET_KEY:-change-me-lab-secret-key-0123456789abcdef}
+  ALLOWED_HOSTS: localhost,127.0.0.1,backend
+  CSRF_TRUSTED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080,http://localhost:8000
+  POSTGRES_HOST: db
+  POSTGRES_DB: ${POSTGRES_DB:-smartcity}
+  POSTGRES_USER: ${POSTGRES_USER:-smartcity}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartcity-lab}
+  LAKE_DIR: /data/lake
+  LAKE_SCALE: ${LAKE_SCALE:-1.0}
+  LAKE_SEED: ${LAKE_SEED:-4030}
+  JWT_KEY_DIR: /data/keys
+  JWT_ACCESS_MINUTES: ${JWT_ACCESS_MINUTES:-5}
+  JWT_REFRESH_HOURS: ${JWT_REFRESH_HOURS:-12}
+  PSEUDONYM_SECRET: ${PSEUDONYM_SECRET:-change-me-pseudonym-secret}
+  AUDIT_LOG_FILE: /data/logs/audit.jsonl
+  STATIC_ROOT: /data/static
+  DEMO_PASSWORD: ${DEMO_PASSWORD:-SmartCity@4030}
+  LOGIN_THROTTLE: ${LOGIN_THROTTLE:-10/min}
+  DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-superadmin}
+  DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-SuperAdmin@4030}
+  DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-superadmin@mjimpya.city}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartcity}
+      POSTGRES_USER: ${POSTGRES_USER:-smartcity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartcity-lab}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [lab]
+
+  backend:
+    build:
+      context: ../backend
+      target: production
+    restart: unless-stopped
+    environment: *backend-env
+    volumes:
+      - lake_data:/data/lake      # generated Parquet files
+      - jwt_keys:/data/keys       # RS256 key pair (private key never leaves this volume)
+      - audit_logs:/data/logs     # audit.jsonl for SIEM forwarders
+      - static_data:/data/static
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 90s
+      retries: 10
+    networks: [lab]
+
+  frontend:
+    build:
+      context: ../frontend
+      target: production
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks: [lab]
+
+volumes:
+  pg_data:
+  lake_data:
+  jwt_keys:
+  audit_logs:
+  static_data:
+
+networks:
+  lab:
+    driver: bridge
